@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+//using System.Threading;
 using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
@@ -8,6 +9,7 @@ namespace Test
 {
     class Program
     {
+        static int num = 0;
         //ダブルクォートをつける
         static string AddDoubleQuote(string path)
         {
@@ -32,7 +34,6 @@ namespace Test
 
             foreach (string na in list)
             {
-                //Console.WriteLine(na);
                 name.Add(na);
             }
 
@@ -53,26 +54,18 @@ namespace Test
                 out_path = "\""+ out_path.Replace(ext, ".m4a");
                 
 
-                string command = " -i " + in_path + " -c:v copy -metadata comment=\"\" -acodec alac" + " " + out_path + "\"";
-
-               // Console.WriteLine();
-               // Console.WriteLine();
-               // Console.WriteLine("ああああああああああああ　　"+ command);
-               // Console.WriteLine();
-               // Console.WriteLine();
-
+                string command = " -i " + in_path + " -threads 0 -c:v copy -metadata comment=\"\" -acodec alac" + " " + out_path + "\"";
                 return command;
             }
             else
             {
-                //Console.WriteLine("ｑｑｑ");
                 return null;
             }
 
         }
         
         //ファイルをエンコードする
-        public static async Task<int> ConvertFile(string in_path,string out_path)
+        public static async Task<int> ConvertFile(string in_path,string out_path,int max)
         {
             return await Task.Run(() =>
             {
@@ -82,14 +75,15 @@ namespace Test
                 string st = GetCommand(in_path,out_path);
                 if (st != null)
                 {
-
+                    //Interlocked(num,1);
                     pro.StartInfo.FileName = "ffmpeg.exe";
                     pro.StartInfo.Arguments = st;  //引数
                     pro.StartInfo.CreateNoWindow = true;    //コンソール画面を表示しない。
                     pro.Start();
                     pro.WaitForExit();  //処理を待機
+                    num++;
                     //Console.WriteLine("exit code: " + pro.ExitCode);
-                    Console.WriteLine(Path.GetFileName(st));
+                    Console.WriteLine("[ " +num +" / " +max+ " ]: "  + Path.GetFileName(st));
 
                     int e = pro.ExitCode;
                     pro.Close();
@@ -125,12 +119,14 @@ namespace Test
             foreach (string n in filePath)
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(n.Replace(Directory.GetParent(str).FullName, Directory.GetCurrentDirectory())));   //フォルダ作成 
-                tasklist.Add(ConvertFile(n, n.Replace(Directory.GetParent(str).FullName, Directory.GetCurrentDirectory())));
+                tasklist.Add(ConvertFile(n, n.Replace(Directory.GetParent(str).FullName, Directory.GetCurrentDirectory()),filePath.Count));
             }
 
             Task.WaitAll(tasklist.ToArray());   //待機
            
 
+            Console.WriteLine();
+            Console.WriteLine();
             Console.WriteLine("変換終了");
 
             Console.ReadKey();
